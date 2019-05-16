@@ -77,7 +77,8 @@ def get_vars(files):
 
     ds = xr.open_dataset(files[0], decode_times=False, decode_coords=False)
     static_vars = [v for v, da in ds.variables.items() if 'time' not in da.dims]
-    static_vars = static_vars+['time', 'time_bound']
+    static_vars = static_vars+['time', ds.time.attrs['bounds']]
+
     time_vars = [v for v, da in ds.variables.items() if 'time' in da.dims and
                  v not in static_vars]
     return static_vars, time_vars
@@ -101,6 +102,8 @@ def main(case, droot, components, only_streams=[], campaign_transfer=False,
             freq = stream_info['freq']
 
             dout =  os.path.join(droot, component, 'proc', 'tseries', freq)
+            if not os.path.exists(dout):
+                os.makedirs(dout, exist_ok=True)
 
             # set target destination on globus
             globus_file_list = []
@@ -169,36 +172,30 @@ def main(case, droot, components, only_streams=[], campaign_transfer=False,
                 cat_cmd = [f'cat {tmpfile} | ncrcat -O -h -v {vars} {file_cat}']
                 compress_cmd = [f'ncks -O -4 -L 1 {file_cat} {file_cat}']
 
-                if demo:
-                    print(cat_cmd)
-                    if i > 3: break
-                else:
-                    if slurmit:
+                if not demo:
+                    if campaign_transfer:
+                        label = file_cat_basename.replace('.', ' ').replace('-', ' ')
+                        xfr_cmd = ['globus', 'transfer',
+                                   f'{globus_glade}:{file_cat}',
+                                   f'{campaign_dout}/{file_cat_basename}',
+                                   '--label', f'"{label}"']
 
-                        if campaign_transfer:
-                            label = file_cat_basename.replace('.', ' ').replace('-', ' ')
-                            xfr_cmd = ['globus', 'transfer',
-                                       f'{globus_glade}:{file_cat}',
-                                       f'{campaign_dout}/{file_cat_basename}',
-                                       '--label', f'"{label}"']
-
-                            xfr_cmd = ' '.join(xfr_cmd)
-                            xfr_cmd = f"task_id=$({xfr_cmd} | tail -n 1 | awk -F': ' '{{print $2}}')"
-                            xfr_cmd = [xfr_cmd]
-                            wait_cmd = ['globus task wait ${task_id}']
-                            cleanup_cmd = ['rm', '-f', file_cat]
-                        else:
-                            xfr_cmd = []
-                            wait_cmd = []
-                            cleanup_cmd = []
-
-                        jid = tm.submit([cat_cmd, compress_cmd,
-                                         xfr_cmd, wait_cmd,
-                                         cleanup_cmd],
-                                        modules=['nco'], memory='100GB')
-
+                        xfr_cmd = ' '.join(xfr_cmd)
+                        xfr_cmd = f"task_id=$({xfr_cmd} | tail -n 1 | awk -F': ' '{{print $2}}')"
+                        xfr_cmd = [xfr_cmd]
+                        wait_cmd = ['globus task wait ${task_id}']
+                        cleanup_cmd = ['rm', '-f', file_cat]
                     else:
-                        check_call(cmd, shell=True)
+                        xfr_cmd = []
+                        wait_cmd = []
+                        cleanup_cmd = []
+
+                    jid = tm.submit([cat_cmd, compress_cmd,
+                                     xfr_cmd, wait_cmd,
+                                     cleanup_cmd],
+                                    modules=['nco'], memory='100GB')
+
+
 
                     if TEST:
                         exit()
@@ -213,15 +210,16 @@ if __name__ == '__main__':
     demo = False
 
     #-- specify case details
-    clobber = True
+    clobber = False
     archive_root = '/glade/scratch/mclong/archive'
-    case = 'g.e21.G1850ECOIAF.T62_g17.002'
+    case = 'g.e21.G1850ECOIAF.T62_g17.004'
     droot = os.path.join(archive_root, case)
 
-    campaign_transfer = True
+
+    campaign_transfer = False
     globus_campaign_path = '/gpfs/csfs1/cesm/development/omwg/projects/omip/cases'
 
-    components = ['ocn', 'ice']
+    components = ['ocn']
 
     main(case, droot, components, only_streams=[],
          campaign_transfer=campaign_transfer,

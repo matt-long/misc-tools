@@ -19,3 +19,8 @@ ocn:
     dateglob: ????
     dateregex: '\d{4}'
     freq: year_1
+ice:
+  cice.h:
+    dateglob: ????-??
+    dateregex: '\d{4}-\d{2}'
+    freq: month_1
