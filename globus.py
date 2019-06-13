@@ -13,7 +13,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
@@ -23,6 +24,7 @@ package_dir = os.path.dirname(os.path.realpath(__file__))
 
 with open(f'{package_dir}/globus-endpoints.yaml', 'r') as fid:
     endpoints = yaml.safe_load(fid)
+
 
 def get_endpoint_uuid(endpoint):
     """Get the endpoint UUID."""
@@ -157,7 +159,7 @@ def makedirs(endpoint, path):
     for i in range(1, len(pathpart)):
         if pathpart[i] not in listdir(endpoint, os.path.join(*pathpart[0:i])):
             logger.info(f'mkdir: {os.path.join(*pathpart[0:i+1])}')
-            mkdir(endpoint, os.path.join(*pathpart[0:i+1]))
+            mkdir(endpoint, os.path.join(*pathpart[0:i + 1]))
 
 
 def transfer_async(src, dst, batch_file=None):
@@ -185,7 +187,7 @@ def transfer_async(src, dst, batch_file=None):
            '--format', 'json']
 
     if batch_file is not None:
-        cmd += ['--batch < '+batch_file]
+        cmd += ['--batch < ' + batch_file]
 
     p = Popen(' '.join(cmd), shell=True, stdout=PIPE, stderr=PIPE)
     stdout, stderr = p.communicate()
@@ -221,7 +223,12 @@ def tasklist(status_filter='ACTIVE'):
       List of dictionaries with information on task matching `status_filter`.
     """
 
-    cmd = ['globus', 'task', 'list', f'--filter-status={status_filter}', '--format=json']
+    cmd = [
+        'globus',
+        'task',
+        'list',
+        f'--filter-status={status_filter}',
+        '--format=json']
     p = Popen(cmd, stdout=PIPE, stderr=PIPE)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('UTF-8')
@@ -285,7 +292,7 @@ def wait(task_data_or_id):
     logger.info(f'transfer status: {task_data["status"]}')
 
     if task_data['status'] != 'SUCCEEDED':
-        with open(f'{tmpdir}/{task_id}.failure.json','w') as fid:
+        with open(f'{tmpdir}/{task_id}.failure.json', 'w') as fid:
             json.dump(task_data, fid)
 
         return False
@@ -293,7 +300,8 @@ def wait(task_data_or_id):
     return True
 
 
-def transfer(src_ep, dst_ep, src_paths=[], dst_paths=[], batch_file=None, retry=3):
+def transfer(src_ep, dst_ep, src_paths=[],
+             dst_paths=[], batch_file=None, retry=3):
     """Perform globus transfer task and wait until completion.
 
     Parameters
@@ -316,7 +324,7 @@ def transfer(src_ep, dst_ep, src_paths=[], dst_paths=[], batch_file=None, retry=
     Returns
     -------
     status : boolean
-        Returns `True` if transfer succeeded; otherwise returns `False`.    
+        Returns `True` if transfer succeeded; otherwise returns `False`.
     """
 
     src_ep_uuid = get_endpoint_uuid(src_ep)
@@ -324,20 +332,22 @@ def transfer(src_ep, dst_ep, src_paths=[], dst_paths=[], batch_file=None, retry=
 
     if batch_file is None:
         fid, batch_file = tempfile.mkstemp(suffix='.filelist', prefix='globus.batch.',
-                                        dir=os.environ['TMPDIR'])
+                                           dir=os.environ['TMPDIR'])
 
-        with open(batch_file,'w') as fid:
+        with open(batch_file, 'w') as fid:
             for src_path, dst_path in zip(src_paths, dst_paths):
                 fid.write(f'{src_path} {dst_path}\n')
 
     for _ in range(retry):
         wait_tasklist()
-        task_data = transfer_async(src_ep_uuid, dst_ep_uuid, batch_file=batch_file)
+        task_data = transfer_async(
+            src_ep_uuid, dst_ep_uuid, batch_file=batch_file)
         if wait(task_data):
             return True
         sleep(10)
 
     return False
+
 
 @click.command()
 @click.option('--src-ep')
@@ -346,7 +356,6 @@ def transfer(src_ep, dst_ep, src_paths=[], dst_paths=[], batch_file=None, retry=
 @click.option('--dst-paths', default=[])
 @click.option('--batch-file', default=None)
 @click.option('--retry', default=3)
-
 def main(src_ep, dst_ep, src_paths, dst_paths, batch_file, retry):
     """Command line interface to `transfer`."""
     if isinstance(src_paths, str):
@@ -355,6 +364,7 @@ def main(src_ep, dst_ep, src_paths, dst_paths, batch_file, retry):
         dst_paths = dst_paths.split(',')
 
     return transfer(src_ep, dst_ep, src_paths, dst_paths, batch_file, retry)
+
 
 if __name__ == '__main__':
 
