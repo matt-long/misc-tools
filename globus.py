@@ -19,7 +19,10 @@ handler.setFormatter(formatter)
 handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
-tmpdir = os.environ['TMPDIR']
+tmpdir = os.environ.get('TMPDIR')
+if not tmpdir:
+    logger.warning("TMPDIR not found in environment, using /tmp")
+    tmpdir = "/tmp"      
 package_dir = os.path.dirname(os.path.realpath(__file__))
 
 with open(f'{package_dir}/globus-endpoints.yaml', 'r') as fid:
@@ -332,7 +335,7 @@ def transfer(src_ep, dst_ep, src_paths=[],
 
     if batch_file is None:
         fid, batch_file = tempfile.mkstemp(suffix='.filelist', prefix='globus.batch.',
-                                           dir=os.environ['TMPDIR'])
+                                           dir=tmpdir)
 
         with open(batch_file, 'w') as fid:
             for src_path, dst_path in zip(src_paths, dst_paths):
