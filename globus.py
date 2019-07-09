@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import os
 import sys
-from subprocess import Popen, PIPE
+from subprocess import check_call, Popen, PIPE, CalledProcessError
 import tempfile
 from time import sleep
 import click
@@ -10,6 +10,14 @@ import yaml
 import json
 
 import logging
+
+# ensure that globus cli is installed
+try:
+    check_call('globus --help', stdout=PIPE, stderr=PIPE, shell=True)
+except CalledProcessError as err:
+    print('ERROR: globus cli does not appear to be installed')
+    raise err
+
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
@@ -22,7 +30,7 @@ logger.addHandler(handler)
 tmpdir = os.environ.get('TMPDIR')
 if not tmpdir:
     logger.warning("TMPDIR not found in environment, using /tmp")
-    tmpdir = "/tmp"      
+    tmpdir = "/tmp"
 package_dir = os.path.dirname(os.path.realpath(__file__))
 
 with open(f'{package_dir}/globus-endpoints.yaml', 'r') as fid:
