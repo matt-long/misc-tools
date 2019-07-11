@@ -2,6 +2,7 @@
 import os
 import sys
 from subprocess import check_call, Popen, PIPE, CalledProcessError
+import fnmatch
 import tempfile
 from time import sleep
 import click
@@ -85,7 +86,7 @@ def isactivated(endpoint):
         raise ValueError('isactivated: unknown return code')
 
 
-def listdir(endpoint, path, filter=None):
+def listdir(endpoint, path, filter=None, return_dict_list=False):
     """Return a list containing the names of the entries in the
        directory given by path.
 
@@ -133,7 +134,63 @@ def listdir(endpoint, path, filter=None):
 
     data = json.loads(stdout.decode('UTF-8'))
 
-    return sorted([d['name'] for d in data['DATA']])
+    if return_dict_list:
+        return data['DATA']
+
+    else:
+        return sorted([d['name'] for d in data['DATA']])
+
+
+def find(endpoint, path, name=None, ret_type=['dir', 'file']):
+    """Recursively walk a file hierarchy.
+
+    Parameters
+    ----------
+    path : string
+        The top level directory.
+
+    name : string, optional
+        Pattern to match.
+    ret_type: list, optional
+        Type of directory entry to return.
+             dir       directory
+             file      regular file
+
+    Returns
+    -------
+
+    ret_list : list
+        Directory listing.
+    """
+
+    # check that types conform
+    known_types = ['dir', 'file']
+    for t in ret_type:
+        if t not in known_types:
+            raise ValueError(f'unknown ret_type: {t}')
+
+    # directory listing at top level
+    dir_listing_i = listdir(endpoint, path, return_dict_list=True)
+
+    # loop over listing, examine each entry
+    ret_list = []
+    while dir_listing_i:
+
+        entry_info = dir_listing_i.pop()
+        entry_name = entry_info['name']
+        entry_type = entry_info['type']
+        entry_fullpath = f'{path}/{entry_name}'
+
+        if entry_type in ret_type:
+            ret_list.append(entry_fullpath)
+
+        if entry_type == 'dir':
+            ret_list.extend(find(endpoint, entry_fullpath, ret_type=ret_type))
+
+    if name is not None:
+        ret_list = list(filter(lambda f: fnmatch.fnmatch(f, name), ret_list))
+
+    return sorted(ret_list)
 
 
 def mkdir(endpoint, path):
