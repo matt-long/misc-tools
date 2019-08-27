@@ -111,6 +111,7 @@ def get_vars(files):
 @click.option('--components', default='ocn')
 @click.option('--archive-root', default=ARCHIVE_ROOT)
 @click.option('--only-streams', default=[])
+@click.option('--only-variables', default=[])
 @click.option('--campaign-transfer', default=False, is_flag=True)
 @click.option('--campaign-path', default=GLOBUS_CAMPAIGN_PATH)
 @click.option('--year-groups', default=None)
@@ -118,7 +119,7 @@ def get_vars(files):
 @click.option('--clobber', default=False, is_flag=True)
 
 def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_streams=[],
-         campaign_transfer=False, campaign_path=None, year_groups=None,
+         only_variables=None, campaign_transfer=False, campaign_path=None, year_groups=None,
          demo=False, clobber=False):
 
     droot = os.path.join(archive_root, case)
@@ -188,6 +189,11 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_stream
             # get variable lists
             static_vars, time_vars = get_vars(files)
 
+            if only_variables is not None:
+                static_vars = [v for v in static_vars if v in only_variables]
+                if not static_vars:
+                    continue
+                
             # make a report
             logger.info(f'found {len(files)} history files')
             logger.info(f'history file years: {min(files_year)}-{max(files_year)}')
