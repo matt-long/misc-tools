@@ -139,6 +139,9 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_stream
     if isinstance(only_streams, str):
         only_streams = only_streams.split(',')
 
+    if isinstance(only_variables, str):
+        only_variables = only_variables.split(',')
+
     logger.info('constructing time-series of the following year groups:')
     logger.info(year_groups)
     print()
@@ -193,7 +196,7 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_stream
                 static_vars = [v for v in static_vars if v in only_variables]
                 if not static_vars:
                     continue
-                
+
             # make a report
             logger.info(f'found {len(files)} history files')
             logger.info(f'history file years: {min(files_year)}-{max(files_year)}')
