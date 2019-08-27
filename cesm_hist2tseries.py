@@ -79,7 +79,7 @@ def get_date_string(files, freq):
     month = [date_start.t0.month, date_end.tf.month]
     day = [date_start.t0.day, date_end.tf.day]
 
-    if freq in ['day_1', 'daily', 'day']:
+    if freq in ['day_1', 'day_5', 'daily', 'day']:
         return (f'{year[0]:04d}{month[0]:02d}{day[0]:02d}-'
                 f'{year[1]:04d}{month[1]:02d}{day[1]:02d}')
 
@@ -193,7 +193,8 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_stream
             static_vars, time_vars = get_vars(files)
 
             if only_variables is not None:
-                static_vars = [v for v in static_vars if v in only_variables]
+                time_vars = [v for v in time_vars if v in only_variables]
+                print(only_variables)
                 if not static_vars:
                     continue
 
