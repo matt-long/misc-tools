@@ -112,7 +112,7 @@ def get_vars(files):
 @click.option('--archive-root', default=ARCHIVE_ROOT)
 @click.option('--output-root', default=None)
 @click.option('--only-streams', default=[])
-@click.option('--only-variables', default=[])
+@click.option('--only-variables', default=None)
 @click.option('--campaign-transfer', default=False, is_flag=True)
 @click.option('--campaign-path', default=GLOBUS_CAMPAIGN_PATH)
 @click.option('--year-groups', default=None)
@@ -135,12 +135,17 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, output_root
     if campaign_transfer and campaign_path is None:
         raise ValueError('campaign path required')
 
-    if isinstance(year_groups, str):
-        year_groups = year_groups.split(',')
-        year_groups = [tuple(int(i) for i in ygi.split(':')) for ygi in year_groups]
 
     if year_groups is None:
         year_groups = [(-1e36, 1e36)]
+        report_year_groups = False
+
+    elif isinstance(year_groups, str):
+        year_groups = year_groups.split(',')
+        year_groups = [tuple(int(i) for i in ygi.split(':')) for ygi in year_groups]
+        report_year_groups = True
+    else:
+        raise ValueError('cannot parse year groups')
 
     if isinstance(only_streams, str):
         only_streams = only_streams.split(',')
@@ -174,7 +179,7 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, output_root
             dateregex = stream_info['dateregex']
             freq = stream_info['freq']
 
-            dout = f'{droot_out}/{component}/proc/tseries/{freq}'            
+            dout = f'{droot_out}/{component}/proc/tseries/{freq}'
             if not os.path.exists(dout):
                 os.makedirs(dout, exist_ok=True)
 
@@ -197,7 +202,6 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, output_root
 
             # get variable lists
             static_vars, time_vars = get_vars(files)
-
             if only_variables is not None:
                 time_vars = [v for v in time_vars if v in only_variables]
                 print(only_variables)
@@ -211,7 +215,9 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, output_root
             logger.info(f'expecting to generate {len(time_vars) * len(year_groups)} timeseries files')
 
             for y0, yf in year_groups:
-                logger.info(f'working on year group {y0}-{yf}')
+
+                if report_year_groups:
+                    logger.info(f'working on year group {y0}-{yf}')
 
                 files_group_i = [f for f, y in zip(files, files_year)
                                  if (y0 <= y) and (y <= yf)]
