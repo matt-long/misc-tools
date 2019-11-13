@@ -110,6 +110,7 @@ def get_vars(files):
 @click.argument('case')
 @click.option('--components', default='ocn')
 @click.option('--archive-root', default=ARCHIVE_ROOT)
+@click.option('--output-root', default=None)
 @click.option('--only-streams', default=[])
 @click.option('--only-variables', default=[])
 @click.option('--campaign-transfer', default=False, is_flag=True)
@@ -118,13 +119,18 @@ def get_vars(files):
 @click.option('--demo', default=False, is_flag=True)
 @click.option('--clobber', default=False, is_flag=True)
 
-def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_streams=[],
-         only_variables=None, campaign_transfer=False, campaign_path=None, year_groups=None,
-         demo=False, clobber=False):
+def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, output_root=None,
+         only_streams=[], only_variables=None, campaign_transfer=False, campaign_path=None,
+         year_groups=None, demo=False, clobber=False):
 
     droot = os.path.join(archive_root, case)
     if isinstance(components, str):
         components = components.split(',')
+
+    if output_root is None:
+        droot_out = droot
+    else:
+        droot_out = os.path.join(output_root, case)
 
     if campaign_transfer and campaign_path is None:
         raise ValueError('campaign path required')
@@ -168,7 +174,7 @@ def main(case, components=['ocn', 'ice'], archive_root=ARCHIVE_ROOT, only_stream
             dateregex = stream_info['dateregex']
             freq = stream_info['freq']
 
-            dout = f'{droot}/{component}/proc/tseries/{freq}'
+            dout = f'{droot_out}/{component}/proc/tseries/{freq}'            
             if not os.path.exists(dout):
                 os.makedirs(dout, exist_ok=True)
 
